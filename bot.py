@@ -2,15 +2,18 @@ import asyncio
 import logging
 import sys
 
-from aiogram import Bot, Dispatcher, types, html
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardMarkup, ReplyKeyboardBuilder, InlineKeyboardButton, KeyboardButton
 import aiohttp
 import sqlite3
+import websockets
 
+from PIL import Image
 from dotenv import load_dotenv
 import os
+import io
 
 load_dotenv()
 
@@ -42,16 +45,26 @@ async def register_handler(message) -> None:
         
 @dp.message()
 async def handle_docs_photo(message: types.Message):
+    file_id = None
     if message.photo:
-        file_info = await bot.get_file(message.photo[-1].file_id)
-        file_path = file_info.file_path
+        file_id = message.photo[-1].file_id
+    elif message.document and message.document.mime_type.startswith('image/'):
+        file_id = message.document.file_id
 
+    if file_id:
+        file_info = await bot.get_file(file_id)
+        file_path = file_info.file_path
+        
         async with aiohttp.ClientSession() as session:
             async with session.get(f'https://api.telegram.org/file/bot{TOKEN}/{file_path}') as resp:
                 if resp.status == 200:
-                    data = await resp.read()
+                    image_data = await resp.read()
+                    image = Image.open(io.BytesIO(image_data))
+                    png_image_data = io.BytesIO()
+                    image.save(png_image_data, format='PNG')
+                    png_image_data.seek(0)
                     # Here you would send the data to your microservice
-                    async with session.post('http://localhost:8000/compile', data=data) as resp:
+                    async with session.post('http://localhost:8000/compile', data=png_image_data) as resp:
                         if resp.status == 200:
                             excel_data = await resp.read()
                             # Save excel data to file
@@ -60,14 +73,15 @@ async def handle_docs_photo(message: types.Message):
                             # Save to database
                             conn = sqlite3.connect('data.db')
                             cursor = conn.cursor()
-                            cursor.execute('INSERT INTO files (file_id, excel_file) VALUES (?, ?)', (message.photo[-1].file_id, 'output.xlsx'))
+                            cursor.execute('INSERT INTO files (user_id, excel_file) VALUES (?, ?)', (message.from_user.id, message.photo[-1].file_id))
                             conn.commit()
                             conn.close()
                             # Send the excel file
-                            await message.reply_document(types.InputFile('output.xlsx'))
+                            await message.reply_document(types.InputFile(message.photo[-1].file_id))
                             # Send inline button
                             markup = InlineKeyboardMarkup()
-                            markup.add(InlineKeyboardButton("Open in Mini App", web_app=types.WebAppInfo(url='index.html')))
+                            web_app_url = f'index.html/?file_id={file_id}'
+                            markup.add(InlineKeyboardButton("Open in Mini App", web_app=types.WebAppInfo(url=web_app_url)))
                             await message.reply("Click the button below to view the info in the mini app", reply_markup=markup)
 
 
