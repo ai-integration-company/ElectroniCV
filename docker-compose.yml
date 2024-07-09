@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+
+  tg-bot:
+    build: ./src/tg-bot
+    container_name: tg-bot
+    restart: unless-stopped
+    networks:
+      - ETF-network
+
+networks:
+  ETF-network:
+    driver: bridge
