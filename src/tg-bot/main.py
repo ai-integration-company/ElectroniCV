@@ -8,8 +8,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.keyboard import InlineKeyboardButton
 import aiohttp
-import sqlite3
-import websockets
+from db_bot import init_db, save_to_db
 
 from PIL import Image
 from dotenv import load_dotenv
@@ -23,23 +22,15 @@ TOKEN = os.environ.get("BOT_TOKEN")
 
 WEB_APP_URL = os.environ.get("WEB_APP_URL")
 
+SERVER_URL = 'http://127.0.0.1:8000/upload/'#поменяй для локальных тестов
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-
-def init_db():
-    conn = sqlite3.connect('data.db')
-    cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY, user_id TEXT, excel_file TEXT)''')
-    conn.commit()
-    conn.close()
-
-
 init_db()
-
 
 @dp.message(Command(commands=['start']))
 async def register_handler(message) -> None:
@@ -70,7 +61,10 @@ async def handle_docs_photo(message: types.Message):
                     # Here you would send the data to your microservice
                     # async with session.post('http://localhost:8000/compile', data=png_image_data) as resp:
                     #     if resp.status == 200:
-                    data = {'Column1': [1, 2, 3], 'Column2': [4, 5, 6]}
+                    # model-generated xlsx file should be received instead of the placeholder xslx below:
+                    if not os.path.exists('output'):
+                        os.makedirs('output')
+                    data = {'Артикул': ['1', '2', '3','4','5','6'], 'Номенклатура': ['шкаф', 'скуф', 'скуф','шкаф','шкаф','скуф'], 'Количество': [1, 10, 2,1,1,1], 'Цена': [100, 10, 50,5,5,1], 'Стоимость': [100, 100, 100,5,5,1]}
                     df = pd.DataFrame(data)
                     output = io.BytesIO()
 
@@ -84,22 +78,23 @@ async def handle_docs_photo(message: types.Message):
                     # Get the Excel data as bytes
                     excel_data = output.getvalue()
 
-                    with open(f'{file_id}.xlsx', 'wb') as f:
+                    with open(f'output/{file_id}.xlsx', 'wb') as f:
                         f.write(excel_data)
                     # Save to database
-                    conn = sqlite3.connect('data.db')
-                    cursor = conn.cursor()
-                    cursor.execute('INSERT INTO files (user_id, excel_file) VALUES (?, ?)',
-                                   (message.from_user.id, file_id))
-                    conn.commit()
-                    conn.close()
+                    save_to_db(message.from_user.id, file_id)
                     # Send the excel file
+                    data_post = aiohttp.FormData()
+                    with open(f'output/{file_id}.xlsx', 'rb') as f:
+                        data_post.add_field('file', f, filename=f'{file_id}')
+                        async with session.post(SERVER_URL, data=data_post) as post_response:
+                            if post_response.status == 200:
+                                print()
                     inline_webapp = InlineKeyboardBuilder()
                     web_app_url = f'{WEB_APP_URL}/?file_id={file_id}'
                     inline_webapp.add(InlineKeyboardButton(text="Открыть",
                                                            web_app=types.WebAppInfo(url=web_app_url)))
 
-                    await message.answer_document(FSInputFile(f'{file_id}.xlsx'), reply_markup=inline_webapp.as_markup())
+                    await message.answer_document(FSInputFile(f'output/{file_id}.xlsx'), reply_markup=inline_webapp.as_markup())
 
 
 async def main() -> None:

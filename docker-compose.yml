@@ -1,13 +1,21 @@
-version: "3.8"
+version: '3.9'
+
 services:
-
-  tg-bot:
-    build: ./src/tg-bot
-    container_name: tg-bot
-    restart: unless-stopped
-    networks:
-      - ETF-network
-
-networks:
-  ETF-network:
-    driver: bridge
+  web:
+    build:
+      context: /src/web-app
+      dockerfile: Dockerfile
+    container_name: web
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "web_app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+  bot:
+    build:
+      context: /src/tg-bot
+      dockerfile: Dockerfile
+    container_name: bot
+    depends_on:
+      - web
+    command: ["python", "bot.py"]
+    env_file:
+      - /src/tg-bot/.env

@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 
-WORKDIR /src/tg-bot
+WORKDIR /src/web-app
 
 COPY requirements.txt .
 
@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Make the entrypoint script executable
-RUN chmod +x /src/tg-bot/entrypoint.sh
+RUN chmod +x /src/web-app/entrypoint.sh
 
 # Run the entrypoint script
-ENTRYPOINT ["/src/tg-bot/entrypoint.sh"]
+ENTRYPOINT ["/src/web-app/entrypoint.sh"]
