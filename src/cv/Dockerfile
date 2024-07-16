@@ -12,7 +12,8 @@ FROM builder AS stage
 
 WORKDIR /cv
 
-RUN gdown https://drive.google.com/uc?id=1eP3q5oyMmRDx5z2KvUAxmj5GeBs_xyS7
+RUN gdown https://drive.google.com/uc?id=1vvjDTZDYbwqfwz6nh7-1_ux09o1ZHDGe
+RUN gdown https://drive.google.com/uc?id=1XY8aT9LyBKXD-xzli9yVMHeNUTEp4D3e
 
 COPY . .
 

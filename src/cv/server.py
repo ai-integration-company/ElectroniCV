@@ -15,7 +15,7 @@ from surya.model.recognition.model import load_model
 from surya.model.recognition.processor import load_processor
 from sahi import AutoDetectionModel
 import uuid
-from utils import get_filtred_boxes_coco, process_yolo_output
+from utils import get_filtred_boxes_coco, process_yolo_output, letters_list_transform, get_estimates
 import logging
 import os
 
@@ -29,7 +29,7 @@ rec_model, rec_processor = load_model(), load_processor()
 threshhold = 0.2
 yolo_model = AutoDetectionModel.from_pretrained(
     model_type='yolov8',
-    model_path='epoch8.pt',
+    model_path='epoch32.pt',
     confidence_threshold=threshhold
 )
 logger.info("Можете начинать отправлять схемы")
@@ -84,16 +84,15 @@ def process_image_endpoint(input: ImageInput):
         rgb_image = Image.alpha_composite(background.convert('RGBA'), image).convert('RGB')
         image = rgb_image
 
-    # unique_filename = f"{uuid.uuid4()}.png"
-    # image.save(unique_filename)
-    # logger.info("Начало детектирования элементов")
-    # yolo_output = get_filtred_boxes_coco(unique_filename, yolo_model, display=False)
-    # logger.info(f'{yolo_output}')
-    # logger.info("Начало детектирования текста")
-    # res = process_yolo_output(yolo_output, unique_filename, langs, det_processor,
-    #                           det_model, rec_model, rec_processor, display=False)
-    # logger.info(f'{res}')
+    unique_filename = f"{uuid.uuid4()}.png"
+    image.save(unique_filename)
+    yolo_output = get_filtred_boxes_coco(unique_filename, yolo_model, display=False)
+    res = process_yolo_output(yolo_output, unique_filename, langs, det_processor,
+                              det_model, rec_model, rec_processor, display=False)
+    res_tr = letters_list_transform(res)
+    search_res = get_estimates(res_tr)
+    logger.info(f'{res}')
 
-    # os.remove(unique_filename)
+    os.remove(unique_filename)
 
-    return {'article': ['1111111111111', '2', '3', '4', '5', '6'], 'name': ['шкаф', 'скуф', 'скуф', 'шкаф', 'шкаф', 'скуф'], 'amount': [1, 10, 2, 1, 1, 1], 'price': [100, 10, 50, 5, 5, 1], 'sum': [100000, 100, 100, 5, 5, 1]}
+    return search_res

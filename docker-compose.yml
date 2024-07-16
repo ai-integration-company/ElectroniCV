@@ -5,7 +5,7 @@ services:
     build:
       context: /src/tg-bot
       dockerfile: Dockerfile
-    container_name: bot
+    container_name: botel
     ports:
       - "80:80"
     env_file:
@@ -20,7 +20,7 @@ services:
     build:
       context: /src/cv
       dockerfile: Dockerfile
-    container_name: cv
+    container_name: cvel
     ports:
       - "3000:3000"
     restart: unless-stopped

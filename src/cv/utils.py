@@ -10,6 +10,238 @@ import matplotlib.pyplot as plt
 from sahi.utils.cv import read_image
 from sahi.predict import get_prediction, get_sliced_prediction
 import numpy as np
+import pandas as pd
+
+
+df = pd.read_csv("Dataset_final.csv", sep=';')
+
+df['Количество полюсов'] = df['Количество полюсов'].fillna('')
+df['Общ. количество полюсов'] = df['Общ. количество полюсов'].fillna('')
+df['Количество проводников (без заземления)'] = df['Количество проводников (без заземления)'].fillna('')
+
+df['Количество полюсов'] = df['Количество полюсов'].apply(lambda x: str(int(x)) if x != '' else '')
+df['Общ. количество полюсов'] = df['Общ. количество полюсов'].apply(lambda x: str(int(x)) if x != '' else '')
+df['Количество проводников (без заземления)'] = df['Количество проводников (без заземления)'].apply(
+    lambda x: str(int(x)) if x != '' else '')
+
+
+rules = {
+    "FU": {
+        "keywords": [],
+        "characteristics": {
+            "Номин. ток": {
+                "patterns": [r"\d+а", r"\\d+", r"\d+"],
+                "extraction": r"\d+",
+                "format": r"\d+, а"
+            }
+        }
+    },
+    "FV": {
+        "keywords": [],
+        "characteristics": {
+            "Максимальное напряжение переменного тока (АС)": {
+                "patterns": [r"\d+в", r"\d+ в"],
+                "extraction": r"\d+",
+                "format": r"{0}, в"
+            },
+            "Количество проводников (без заземления)": {
+                "patterns": [r"\d+ р", r"\d+р"],
+                "extraction": r"\d+",
+                "format": r"{0}"
+            }
+        }
+    },
+    "ITU": {
+        "keywords": [],
+        "characteristics": {}
+    },
+    "KM": {
+        "keywords": [],
+        "characteristics": {
+            "Номин. раб. ток Ie при AC-3, 400 В": {
+                "patterns": [r"\d+а", r"\\d+", r"\d+"],
+                "extraction": r"\d+",
+                "default": "95, а",
+                "format": r"\d+, а"
+            }
+        }
+    },
+    "PA": {
+        "keywords": [],
+        "characteristics": {}
+    },
+    "PM": {
+        "keywords": [],
+        "characteristics": {}
+    },
+    "PV": {
+        "keywords": [],
+        "characteristics": {}
+    },
+    "QD": {
+        "keywords": [],
+        "characteristics": {
+            "Номин. ток утечки": {
+                "patterns": [],
+                "extraction": "",
+                "default": "0.3, а",
+                "format": ""
+            },
+            "Номин. ток": {
+                "patterns": [r"\d+а", r"\\d+", r"\d+"],
+                "extraction": r"\d+",
+                "default": "40, а",
+                "format": r"\d+, а"
+            },
+            "Тип тока утечки": {
+                "patterns": [],
+                "extraction": "",
+                "default": "ас",
+                "format": r"{0}"
+            },
+            "Номин. напряжение": {
+                "patterns": [r"\d+в", r"\d+ в"],
+                "extraction": r"\d+",
+                "default": "400, в",
+                "format": r"{0}, в"
+            },
+            "Количество полюсов": {
+                "patterns": [r"\d+ р", r"\d+р"],
+                "extraction": r"\d+",
+                "default": "1",
+                "format": r"{0}"
+            }
+        }
+    },
+    "QF": {
+        "keywords": [],
+        "characteristics": {
+            "Номин. ток": {
+                "patterns": [r"с\d+а", r"\d+а", r"с\d+", r"\d+"],
+                "extraction": r"\d+",
+                "default": "16",
+                "format": r"{0}, а"
+            },
+            "Общ. количество полюсов": {
+                "patterns": [r"\d+р", r"\d+ р"],
+                "extraction": r"\d+",
+                "default": "1",
+                "format": r"{0}"
+            },
+            "Характеристика срабатывания (кривая тока)": {
+                "patterns": [r"хар.[авсd]", r"хар. [авсd]", r"([авсd])", r"[авсd]\d+а", r" [авсd] "],
+                "extraction": r"[a-d]",
+                "default": "с",
+                "format": r"{0}"
+            }
+        }
+    },
+    "QFD": {
+        "keywords": [],
+        "characteristics": {
+            "Общ. количество полюсов": {
+                "patterns": [r"\d+р", r"\d+ р"],
+                "extraction": r"\d+",
+                "default": "1",
+                "format": r"{0}"
+            },
+            "Номин. ток": {
+                "patterns": [r"с\d+а", r"\d+а", r"с\d+", r"\d+"],
+                "extraction": r"\d+",
+                "default": "16",
+                "format": r"{0}, а"
+            },
+            "Характеристика срабатывания (кривая тока)": {
+                "patterns": [r"хар.[авсd]", r"хар. [авсd]", r"([авсd])", r"[авсd]\d+а", r" [авсd] "],
+                "extraction": r"[a-d]",
+                "default": "с",
+                "format": r"{0}"
+            }
+        }
+    },
+    "QFU": {
+        "keywords": [],
+        "characteristics": {
+            "Номин. ток": {
+                "patterns": [r"\d+а", r"\\d+", r"\d+"],
+                "extraction": r"\d+",
+                "default": "10, а",
+                "format": r"\d+, а"
+            }
+        }
+    },
+    "QS": {
+        "keywords": [],
+        "characteristics": {
+            "Количество полюсов": {
+                "patterns": [r"\d+р", r"\d+ р"],
+                "extraction": r"\d+",
+                "default": "1",
+                "format": r"{0}"
+            },
+            "Номин. ток": {
+                "patterns": [r"с\d+а", r"\d+а", r"с\d+", r"\d+"],
+                "extraction": r"\d+",
+                "default": "100, а",
+                "format": r"{0}, а"
+            }
+        }
+    },
+    "QW": {
+        "keywords": [],
+        "characteristics": {
+            "Количество полюсов": {
+                "patterns": [r"\d+р", r"\d+ р"],
+                "extraction": r"\d+",
+                "default": "1",
+                "format": r"{0}"
+            },
+            "Номин. ток": {
+                "patterns": [r"с\d+а", r"\d+а", r"с\d+", r"\d+"],
+                "extraction": r"\d+",
+                "default": "100, а",
+                "format": r"{0}, а"
+            }
+        }
+    },
+    "TT": {
+        "keywords": [],
+        "characteristics": {
+            "Вторичный номин. ток": {
+                "patterns": [r"\\d+", r" \d+"],
+                "extraction": r"\d+",
+                "default": "5, а",
+                "format": r"{0}, а"
+            },
+            "Первичный номин. ток": {
+                "patterns": [r"\d+\\", r"\d+ \\"],
+                "extraction": r"\d+",
+                "default": "800, а",
+                "format": r"{0}, а"
+            }
+        }
+    },
+    "Timer": {
+        "keywords": [],
+        "characteristics": {}
+    },
+    "XS": {
+        "keywords": [],
+        "characteristics": {}
+    },
+    "YZIP": {
+        "keywords": [],
+        "characteristics": {}
+    },
+    "switch": {
+        "keywords": [],
+        "characteristics": {}
+    },
+    "Шкаф": {
+        "keywords": [],
+        "characteristics": {}
+    }
+}
 
 
 def rotate_bbox(bbox, angle, image_shape):
@@ -30,8 +262,6 @@ def rotate_bbox(bbox, angle, image_shape):
         new_y1 = x1
         new_x2 = height - y1
         new_y2 = x2
-    else:
-        raise ValueError("Only 90 and -90 degree rotations are supported.")
 
     return [new_x1, new_y1, new_x2, new_y2]
 
@@ -143,9 +373,6 @@ def filter_text(text):
     return True
 
 
-texed_elements = ["WH", "AVR"]
-
-
 def extract_text_around_element(
         class_label, fbbox, image, margins, angle, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model,
         rec_processor, display=False):
@@ -197,8 +424,6 @@ def extract_text_around_element(
 
             if line.confidence >= 0.6:
                 flg = True
-                if class_label not in texed_elements and intersection_area_percentage_two(fbbox, line.bbox) >= 0.9:
-                    return -1
                 for part in line.text.split('\n'):
                     stripped_text = part.strip()
                     if len(stripped_text) > 1 and filter_text(stripped_text):
@@ -258,7 +483,7 @@ def extract_text_around_element(
     next_cluster_label = 0
     for label_x in unique_labels_x:
         if label_x == -1:
-            continue  # Ignore noise
+            continue
         group_x_indices = np.where(labels_x == label_x)[0]
         group_x = midpoints[group_x_indices]
 
@@ -378,8 +603,6 @@ def extract_text_around_element_hor_vert(
     ), margins, -90, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model, rec_processor, display)
     rotated = extract_text_around_element(class_label, bbox.copy(), image.copy(
     ), margins, 0, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model, rec_processor, display)
-    if origin == -1 or rotated == -1:
-        return -1
     if display:
         print(origin)
         print(rotated)
@@ -516,7 +739,141 @@ def process_yolo_output(yolo_output, image_path, langs, det_processor, det_model
         text = extract_text_around_element_hor_vert(
             class_label, bbox, pil_image, margins, 1, 1, mmarg / 12, mmarg / 6.5, langs, det_processor, det_model,
             rec_model, rec_processor, display)
-        if text != -1:
+        if class_label not in ['WH', 'HL', 'AVR']:
             extracted_texts.append((class_label, text))
 
     return extracted_texts
+
+
+def get_full_text(image, angle, langs, det_processor, det_model, rec_model, rec_processor, display=False):
+
+    image = image.rotate(angle, expand=True)
+
+    numpy_image = np.array(cropped_img)
+
+    img = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
+
+    rescaled_img = cv2.resize(img, None, fx=fx, fy=fy, interpolation=cv2.INTER_CUBIC)
+
+    gray_img = cv2.cvtColor(rescaled_img, cv2.COLOR_BGR2GRAY)
+
+    kernel = np.ones((1, 1), np.uint8)
+    dilated_img = cv2.dilate(gray_img, kernel, iterations=1)
+    eroded_img = cv2.erode(dilated_img, kernel, iterations=1)
+
+    if display:
+        display_image("Processed Image", eroded_img, cmap='gray')
+
+    with torch.no_grad():
+        predictions_original = run_ocr([image_pil], [langs], det_model, det_processor, rec_model, rec_processor)
+
+    for page in predictions_original:
+        for line in page.text_lines:
+
+            if line.confidence >= 0.6:
+                flg = True
+                for part in line.text.split('\n'):
+                    stripped_text = part.strip()
+                    if len(stripped_text) > 1 and filter_text(stripped_text):
+                        pass
+                    else:
+                        flg = False
+                if flg:
+                    concatenated_results.append(line)
+                    all_texts.append(line.text)
+    return all_texts
+
+
+def get_full_text_vert_hor(image, langs, det_processor, det_model, rec_model, rec_processor, display=False):
+
+    original = get_full_text(image, 0, langs, det_processor, det_model, rec_model, rec_processor, display=False)
+    rotated = get_full_text(image, -90, langs, det_processor, det_model, rec_model, rec_processor, display=False)
+
+    return original+rotated
+
+
+def remove_extra_spaces(text):
+    cleaned_text = re.sub(r'\s+', ' ', text)
+    cleaned_text = cleaned_text.strip()
+    return cleaned_text
+
+
+def letter_transform(text):
+    transformations = {
+        'A': 'А',
+        'B': 'В',
+        'E': 'Е',
+        'H': 'Н',
+        'K': 'Л',
+        'M': 'М',
+        'O': '0',
+        'P': 'Р',
+        'C': 'С',
+        'T': 'Т',
+        'Y': 'У',
+        'X': 'Х',
+        'a': 'а',
+        'e': 'е',
+        'o': '0',
+        'p': 'р',
+        'c': 'с',
+        'y': 'у',
+        'x': 'х',
+        'з': '3',
+        'б': '6',
+        'I': '1',
+        'l': '1',
+        ']': '1',
+        '|': '1',
+        ',': '.',
+        'n': 'П'
+    }
+    transformed_text = ''.join(transformations.get(ch, ch) for ch in text)
+    return re.sub(r'\b(\d{2,})4\b', r'\1А', transformed_text)
+
+
+def letters_list_transform(data):
+    return [(key, [letter_transform(item) for item in values]) for key, values in data]
+
+
+def get_estimates(input):
+
+    def find_match(s, pattern):
+        match = re.search(pattern, s)
+        return match.group(0) if match else None
+
+    smet = pd.DataFrame(columns=['article', 'name', 'price'])
+
+    for label, text in input:
+        text = " ".join(text).lower()
+        r = rules[label]
+        keywords = r['keywords']
+        chars = r['characteristics']
+
+        search_dict = {}
+        for charactersitic, p in chars.items():
+            found = [find_match(text, mask) for mask in p['patterns']]
+            values = [find_match(x, p['extraction']) for x in found if x is not None]
+            values = [x for x in values if x is not None]
+            if values:
+                char = p['format'].format(values[0])
+                search_dict[charactersitic] = char
+
+        mask = df['тип элемента'].apply(lambda x: label == x)
+        for col, val in search_dict.items():
+            mask &= (df[col] == val)
+
+        q = df[mask].reset_index(drop=True)
+        if q.empty:
+            row = {"article": f"Нет в каталоге {label}", 'name': f"{label}",  "price": 0}
+        else:
+            res = q.loc[q['Базовая цена, ₽'].argmin()]
+            row = {'article': res['Артикул'], 'name': res['Наименование'], 'price': res['Базовая цена, ₽']}
+        smet = pd.concat([smet, pd.DataFrame.from_records([row])])
+
+    grouped = smet.groupby('article').size().reset_index(name='amount')
+    smet = pd.merge(smet, grouped, on='article')
+    smet['sum'] = smet['price'] * smet['amount']
+    smet_unique = smet.drop_duplicates(subset=['article'])
+
+    return smet_unique.to_dict(orient='list')
