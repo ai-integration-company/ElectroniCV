@@ -55,7 +55,7 @@ class ImageInput(BaseModel):
 
 
 class DataOutput(BaseModel):
-    id: List[str]
+    article: List[str]
     name: List[str]
     amount: List[int]
     price: List[int]
@@ -94,6 +94,6 @@ def process_image_endpoint(input: ImageInput):
     #                           det_model, rec_model, rec_processor, display=False)
     # logger.info(f'{res}')
 
-    os.remove(unique_filename)
+    # os.remove(unique_filename)
 
     return {'article': ['1111111111111', '2', '3', '4', '5', '6'], 'name': ['шкаф', 'скуф', 'скуф', 'шкаф', 'шкаф', 'скуф'], 'amount': [1, 10, 2, 1, 1, 1], 'price': [100, 10, 50, 5, 5, 1], 'sum': [100000, 100, 100, 5, 5, 1]}
