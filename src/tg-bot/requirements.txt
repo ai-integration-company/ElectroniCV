@@ -1,0 +1,10 @@
+aiogram
+aiohttp
+Pillow
+python-dotenv
+pandas
+openpyxl
+xlsxwriter
+pdf2image
+fastapi
+uvicorn
