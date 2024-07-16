@@ -74,7 +74,6 @@ async def handle_docs_photo(message: types.Message):
                     #    f.write(encoded_image.decode('utf-8'))
                     #    await message.answer_document(FSInputFile('file.txt'))
 
-                    # Sending the data to the microservice
                     data = {'article': [], 'name': [], 'amount': [], 'price': [], 'sum': []}
                     async with session.post(ML_URL, json={'image': encoded_image.decode()}) as ml_resp:
                         if ml_resp.status == 200:
@@ -89,11 +88,10 @@ async def handle_docs_photo(message: types.Message):
                     output.seek(0)
                     excel_data = output.getvalue()
 
-                    # Save to database
                     conn = db.get_db()
                     db.create_file_data(conn, message.from_user.id, file_id, df.to_dict(orient='records'))
                     conn.close()
-                    # Send the excel file
+
                     inline_webapp = InlineKeyboardBuilder()
                     if WEB_APP_URL == "https://adam-suliman.github.io/EKF_web/":
                         web_app_url = f'{WEB_APP_URL}/?user_id={message.from_user.id}&file_id={file_id}'

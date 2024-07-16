@@ -13,6 +13,7 @@ import numpy as np
 
 
 def rotate_bbox(bbox, angle, image_shape):
+
     x1, y1, x2, y2 = bbox
     if angle == 0:
         return bbox
@@ -52,6 +53,7 @@ def display_image(title, img, cmap='gray'):
 
 
 def calculate_min_distance(bbox1, bbox2):
+
     x1_min, y1_min, x1_max, y1_max = bbox1
     x2_min, y2_min, x2_max, y2_max = bbox2
 
@@ -82,6 +84,7 @@ def bbox_distance(bbox1, bbox2):
 
 
 def intersection_area_percentage(bbox1, bbox2):
+
     box1 = box(bbox1[0], bbox1[1], bbox1[2], bbox1[3])
     box2 = box(bbox2[0], bbox2[1], bbox2[2], bbox2[3])
 
@@ -98,7 +101,24 @@ def intersection_area_percentage(bbox1, bbox2):
     return max(percentage1, percentage2)
 
 
+def intersection_area_percentage_two(bbox1, bbox2):
+
+    box1 = box(bbox1[0], bbox1[1], bbox1[2], bbox1[3])
+    box2 = box(bbox2[0], bbox2[1], bbox2[2], bbox2[3])
+
+    if not box1.intersects(box2):
+        return 0.0
+
+    intersection = box1.intersection(box2).area
+    area1 = box1.area
+
+    percentage1 = (intersection / area1) * 100
+
+    return percentage1
+
+
 def contains_more_than_one_digit(text):
+
     return len(re.findall(r'\d', text)) > 1
 
 
@@ -123,9 +143,12 @@ def filter_text(text):
     return True
 
 
+texed_elements = ["WH", "AVR"]
+
+
 def extract_text_around_element(
-        fbbox, image, margins, angle, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model, rec_processor,
-        display=False):
+        class_label, fbbox, image, margins, angle, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model,
+        rec_processor, display=False):
     x, y, w, h = fbbox
     fbbox = rotate_bbox([x, y, x+w, y+h], angle, (image.height, image.width))
     x, y, x2, y2 = fbbox
@@ -171,8 +194,11 @@ def extract_text_around_element(
 
     for page in predictions_original:
         for line in page.text_lines:
+
             if line.confidence >= 0.6:
                 flg = True
+                if class_label not in texed_elements and intersection_area_percentage_two(fbbox, line.bbox) >= 0.9:
+                    return -1
                 for part in line.text.split('\n'):
                     stripped_text = part.strip()
                     if len(stripped_text) > 1 and filter_text(stripped_text):
@@ -346,20 +372,19 @@ def extract_text_around_element(
 
 
 def extract_text_around_element_hor_vert(
-        bbox, image, margins, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model, rec_processor, display):
-    origin = extract_text_around_element(
-        bbox.copy(),
-        image.copy(),
-        margins, -90, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model, rec_processor, display)
-    rotated = extract_text_around_element(
-        bbox.copy(),
-        image.copy(),
-        margins, 0, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model, rec_processor, display)
-    if not display:
+        class_label, bbox, image, margins, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model,
+        rec_processor, display):
+    origin = extract_text_around_element(class_label, bbox.copy(), image.copy(
+    ), margins, -90, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model, rec_processor, display)
+    rotated = extract_text_around_element(class_label, bbox.copy(), image.copy(
+    ), margins, 0, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model, rec_processor, display)
+    if origin == -1 or rotated == -1:
+        return -1
+    if display:
         print(origin)
         print(rotated)
         print(" ".join([text for _, text in sorted(origin+rotated)[:5]]))
-    return " ".join([text for _, text in sorted(origin+rotated)[:5]])
+    return [text for _, text in sorted(origin+rotated)[:5]]
 
 
 def predict_image(image_path, detection_model):
@@ -377,26 +402,12 @@ def predict_image(image_path, detection_model):
     eroded_img = cv2.erode(dilated_img, kernel, iterations=1)
 
     processed_img = cv2.cvtColor(eroded_img, cv2.COLOR_GRAY2RGB)
-    standard_result = get_prediction(
-        processed_img,
-        detection_model
-    )
-    Ws, Hs = [], []
-    for i in standard_result.to_coco_annotations():
-        x, y, w, h = i['bbox']
-        Ws.append(w)
-        Hs.append(h)
-
-    if not Hs:
-        Hs = [150]
-    if not Ws:
-        Ws = [150]
 
     sliced_result = get_sliced_prediction(
         image=processed_img,
         detection_model=detection_model,
-        slice_height=round(max(Hs) * 3.5),
-        slice_width=round(max(Ws) * 3.5),
+        slice_height=640,
+        slice_width=640,
         overlap_height_ratio=0.8,
         overlap_width_ratio=0.8
     )
@@ -420,21 +431,21 @@ def calculate_iou(box1, box2):
 
 def filter_boxes(detections, iou_threshold=0.6):
     threshold_dict = {'AUX': 0.24,
-                      'AVR': 0.28,    'FR': 0.87,
-                      'FU': 0.45,    'FV': 0.26,
+                      'AVR': 0.28,    'FR': 0.7,
+                      'FU': 0.4,    'FV': 0.26,
                       'HL': 0.32,    'ITU': 0.35,
-                      'K': 0.28,    'KM': 0.45,
-                      'M': 0.64,
-                      'MX': 0.91,
-                      'OPS': 0.89,
+                      'K': 0.28,    'KM': 0.5,
+                      'M': 0.54,
+                      'MX': 0.7,
+                      'OPS': 0.7,
                       'PA': 0.27,    'PM': 0.27,
-                      'PV': 0.28,    'Q': 0.89,
-                      'QD': 0.9,    'QF': 0.51,
-                      'QFD': 0.46,    'QFU': 0.87,
-                      'QS': 0.54,    'QW': 0.93,
+                      'PV': 0.28,    'Q': 0.7,
+                      'QD': 0.7,    'QF': 0.51,
+                      'QFD': 0.5,    'QFU': 0.7,
+                      'QS': 0.54,    'QW': 0.7,
                       'R': 0.32,    'S': 0.28,
-                      'TT': 0.3,    'WH': 0.38,
-                      'XS': 0.94,    'YZIP': 0.27,
+                      'TT': 0.7,    'WH': 0.7,
+                      'XS': 0.7,    'YZIP': 0.27,
                       'switch': 0.32}
     pre_filtered_boxes = []
     for i in detections:
@@ -503,9 +514,9 @@ def process_yolo_output(yolo_output, image_path, langs, det_processor, det_model
 
     for bbox, class_label in zip(bboxes, class_labels):
         text = extract_text_around_element_hor_vert(
-            bbox, pil_image, margins, 1, 1, mmarg / 12, mmarg / 6.5, langs, det_processor, det_model, rec_model,
-            rec_processor, display)
-        print(text)
-        extracted_texts.append((class_label, text))
+            class_label, bbox, pil_image, margins, 1, 1, mmarg / 12, mmarg / 6.5, langs, det_processor, det_model,
+            rec_model, rec_processor, display)
+        if text != -1:
+            extracted_texts.append((class_label, text))
 
     return extracted_texts

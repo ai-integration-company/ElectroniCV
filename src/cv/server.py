@@ -22,14 +22,14 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-langs = ["ru", "en"]
+langs = ["ru"]
 det_processor, det_model = load_detection_processor(), load_detection_model()
 rec_model, rec_processor = load_model(), load_processor()
 
-threshhold = 0.1
+threshhold = 0.2
 yolo_model = AutoDetectionModel.from_pretrained(
     model_type='yolov8',
-    model_path='best (3).pt',
+    model_path='epoch8.pt',
     confidence_threshold=threshhold
 )
 logger.info("Можете начинать отправлять схемы")
