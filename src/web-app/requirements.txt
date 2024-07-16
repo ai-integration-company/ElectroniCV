@@ -1,5 +1,0 @@
-Pillow
-fastapi
-uvicorn
-pandas
-openpyxl
