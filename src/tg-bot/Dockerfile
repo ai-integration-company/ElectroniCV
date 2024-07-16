@@ -1,17 +1,20 @@
-FROM python:3.9-slim
+FROM python:3.9-slim AS builder
 
-WORKDIR /src/tg-bot
+WORKDIR /tg-bot
 
 COPY requirements.txt .
 
-# Install the dependencies
+RUN apt-get update && \
+    apt-get install -y poppler-utils
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code into the container
+FROM builder AS stage
+
+WORKDIR /tg-bot
+
 COPY . .
 
-# Make the entrypoint script executable
-RUN chmod +x /src/tg-bot/entrypoint.sh
+EXPOSE 80
 
-# Run the entrypoint script
-ENTRYPOINT ["/src/tg-bot/entrypoint.sh"]
+CMD uvicorn web_app:app --reload --host 0.0.0.0 --port 80 & python main.py

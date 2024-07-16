@@ -1,0 +1,17 @@
+shapely>=2.0.0
+surya-ocr
+streamlit
+sahi
+ultralytics
+Pillow
+matplotlib
+opencv-python-headless
+torch
+scikit-learn
+numpy
+fastapi
+uvicorn
+pydantic
+prometheus-fastapi-instrumentator
+dill
+gdown

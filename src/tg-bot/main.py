@@ -24,15 +24,15 @@ TOKEN = os.environ.get("BOT_TOKEN")
 
 WEB_APP_URL = os.environ.get("WEB_APP_URL")
 
-SERVER_URL = 'http://127.0.0.1:80/upload/'#поменять для локальных тестов
+ML_URL = os.environ.get("ML_URL")
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 db.init_db()
+
 
 @dp.message(Command(commands=['start']))
 async def register_handler(message) -> None:
@@ -56,7 +56,8 @@ async def handle_docs_photo(message: types.Message):
         file_info = await bot.get_file(file_id)
         file_path = file_info.file_path
 
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=800)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(f'https://api.telegram.org/file/bot{TOKEN}/{file_path}') as resp:
                 if resp.status == 200:
                     if is_pdf:
@@ -65,20 +66,20 @@ async def handle_docs_photo(message: types.Message):
                     else:
                         image_data = await resp.read()
                         image = Image.open(io.BytesIO(image_data))
-                    
+
                     png_image_data = io.BytesIO()
-                    image.save(png_image_data,format='PNG')
+                    image.save(png_image_data, format='PNG')
                     encoded_image = base64.b64encode(png_image_data.getvalue())
-                    #with open('file.txt','w') as f:
+                    # with open('file.txt','w') as f:
                     #    f.write(encoded_image.decode('utf-8'))
                     #    await message.answer_document(FSInputFile('file.txt'))
-                    
-                    # Sending the data to the microservice
-                    #async with session.post('http://127.0.0.1:8000/ml', json={'image': encoded_image.decode()}) as ml_resp:
-                    #    if ml_resp.status == 200:
-                    #        ml_data = await ml_resp.json()
 
-                    data = {'article': ['1111111111111', '2', '3','4','5','6'], 'name': ['шкаф', 'скуф', 'скуф','шкаф','шкаф','скуф'], 'amount': [1, 10, 2,1,1,1], 'price': [100, 10, 50,5,5,1], 'sum': [100000, 100, 100,5,5,1]}
+                    # Sending the data to the microservice
+                    data = {'article': [], 'name': [], 'amount': [], 'price': [], 'sum': []}
+                    async with session.post(ML_URL, json={'image': encoded_image.decode()}) as ml_resp:
+                        if ml_resp.status == 200:
+                            data = await ml_resp.json()
+
                     df = pd.DataFrame(data)
                     df_rus = pd.DataFrame(data)
                     df_rus.rename(columns=db.column_mapping, inplace=True)
@@ -94,11 +95,14 @@ async def handle_docs_photo(message: types.Message):
                     conn.close()
                     # Send the excel file
                     inline_webapp = InlineKeyboardBuilder()
-                    web_app_url = f'{WEB_APP_URL}/?user_id={message.from_user.id}&file_id={file_id}'
+                    if WEB_APP_URL == "https://adam-suliman.github.io/EKF_web/":
+                        web_app_url = f'{WEB_APP_URL}/?user_id={message.from_user.id}&file_id={file_id}'
+                    else:
+                        web_app_url = f'{WEB_APP_URL}'
                     inline_webapp.add(InlineKeyboardButton(text="Открыть",
                                                            web_app=types.WebAppInfo(url=web_app_url)))
 
-                    await message.answer_document(BufferedInputFile(excel_data,f'{file_id}.xlsx'), reply_markup=inline_webapp.as_markup())
+                    await message.answer_document(BufferedInputFile(excel_data, f'{file_id}.xlsx'), reply_markup=inline_webapp.as_markup())
 
 
 async def main() -> None:

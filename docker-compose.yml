@@ -10,3 +10,30 @@ services:
       - "80:80"
     env_file:
       - /src/tg-bot/.env
+    restart: unless-stopped
+    depends_on:
+      - cv
+    networks:
+      - electro-net
+
+  cv:
+    build:
+      context: /src/cv
+      dockerfile: Dockerfile
+    container_name: cv
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - electro-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+
+networks:
+  electro-net:
+    driver: bridge
