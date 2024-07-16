@@ -20,11 +20,11 @@ ML_URL=http://cv:3000/process_image
 BOT_TOKEN=7055398405:AAEX7X5OAPRzsTfgu8u_To_TddsKmJV3Z30
 WEB_APP_URL=https://codenrock.com/contests/ekf-ai-challenge
 ```
- 4. Выполните следующие команды 
+ 4. Выполните следующие команды
 
  ```bash
 docker compose build
-docker compose up -d
+docker compose up 
 ```
- 5. Подождите ~8 мин, чтобы загрузились модели
+ 5. Для работы в логах должно быть **cv  | INFO:     Application startup complete**. Это примерно 5-8 минут после выполнения команды docker compose up.
  6. Перейдите в бота https://t.me/electroCVTEST_bot и тестируйте. **Доступ к смете по кнопке работать НЕ будет. Там необходимы дополнительные настройки доступа тг бота и развернутый сайт с туннелированием.**
