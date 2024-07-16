@@ -32,7 +32,7 @@ yolo_model = AutoDetectionModel.from_pretrained(
     model_path='best (3).pt',
     confidence_threshold=threshhold
 )
-
+logger.info("Можете начинать отправлять схемы")
 app = FastAPI()
 
 origins = [
@@ -84,12 +84,12 @@ def process_image_endpoint(input: ImageInput):
         rgb_image = Image.alpha_composite(background.convert('RGBA'), image).convert('RGB')
         image = rgb_image
 
-    unique_filename = f"{uuid.uuid4()}.png"
-    image.save(unique_filename)
-
+    # unique_filename = f"{uuid.uuid4()}.png"
+    # image.save(unique_filename)
+    # logger.info("Начало детектирования элементов")
     # yolo_output = get_filtred_boxes_coco(unique_filename, yolo_model, display=False)
     # logger.info(f'{yolo_output}')
-
+    # logger.info("Начало детектирования текста")
     # res = process_yolo_output(yolo_output, unique_filename, langs, det_processor,
     #                           det_model, rec_model, rec_processor, display=False)
     # logger.info(f'{res}')

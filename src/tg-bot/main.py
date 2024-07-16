@@ -56,7 +56,7 @@ async def handle_docs_photo(message: types.Message):
         file_info = await bot.get_file(file_id)
         file_path = file_info.file_path
 
-        timeout = aiohttp.ClientTimeout(total=800)
+        timeout = aiohttp.ClientTimeout(total=6000)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(f'https://api.telegram.org/file/bot{TOKEN}/{file_path}') as resp:
                 if resp.status == 200:
