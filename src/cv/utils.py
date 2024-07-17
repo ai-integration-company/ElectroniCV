@@ -1,5 +1,5 @@
 import re
-
+import itertools
 from shapely.geometry import box
 from PIL import Image
 from surya.ocr import run_ocr
@@ -14,7 +14,7 @@ import pandas as pd
 import math
 
 
-df = pd.read_csv("Dataset_final.csv", sep=';')
+df = pd.read_csv("Dataset_fin.csv", sep=';')
 
 df['Количество полюсов'] = df['Количество полюсов'].fillna('')
 df['Общ. количество полюсов'] = df['Общ. количество полюсов'].fillna('')
@@ -31,9 +31,9 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. ток": {
-                "patterns": [r"\d+а", r"\d+ а", r"\\\d+", r" \d+ "],
-                "extraction": r"\d+",
-                "format": r"\d+, а"
+                "patterns": [r" (0|[1-9]\d*)а", r" (0|[1-9]\d*) а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
+                "extraction": r"(0|[1-9]\d*)",
+                "format": r"{0}, а"
             }
         }
     },
@@ -41,13 +41,13 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Максимальное напряжение переменного тока (АС)": {
-                "patterns": [r"\d+в", r"\d+ в"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)в", r"(0|[1-9]\d*) в"],
+                "extraction": r"(0|[1-9]\d*)",
                 "format": r"{0}, в"
             },
             "Количество проводников (без заземления)": {
-                "patterns": [r"\d+ р", r"\d+р"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*) р", r"(0|[1-9]\d*)р"],
+                "extraction": r"(0|[1-9]\d*)",
                 "format": r"{0}"
             }
         }
@@ -60,10 +60,10 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. раб. ток Ie при AC-3, 400 В": {
-                "patterns": [r"\d+а", r"\\\d+", r"\d+"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)а", r"/(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "95, а",
-                "format": r"\d+, а"
+                "format": r"(0|[1-9]\d*), а"
             }
         }
     },
@@ -89,10 +89,10 @@ rules = {
                 "format": ""
             },
             "Номин. ток": {
-                "patterns": [r"\d+а", r"\\\d+", r"\d+"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)а", r"/(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "40, а",
-                "format": r"\d+, а"
+                "format": r"(0|[1-9]\d*), а"
             },
             "Тип тока утечки": {
                 "patterns": [],
@@ -101,14 +101,14 @@ rules = {
                 "format": r"{0}"
             },
             "Номин. напряжение": {
-                "patterns": [r"\d+в", r"\d+ в"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)в", r"(0|[1-9]\d*) в"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "400, в",
                 "format": r"{0}, в"
             },
             "Количество полюсов": {
-                "patterns": [r"\d+ р", r"\d+р"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*) р", r"(0|[1-9]\d*)р"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "1",
                 "format": r"{0}"
             }
@@ -118,19 +118,19 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. ток": {
-                "patterns": [r"с\d+а", r"\d+а", r"с\d+", r"\d+"],
-                "extraction": r"\d+",
+                "patterns": [r"с(0|[1-9]\d*)а", r"(0|[1-9]\d*)а", r"с(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "16",
                 "format": r"{0}, а"
             },
             "Общ. количество полюсов": {
-                "patterns": [r"\d+р", r"\d+ р"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)р", r"(0|[1-9]\d*) р"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "1",
                 "format": r"{0}"
             },
             "Характеристика срабатывания (кривая тока)": {
-                "patterns": [r"хар.[авсd]", r"хар. [авсd]", r"([авсd])", r"[авсd]\d+а", r" [авсd] "],
+                "patterns": [r"хар.[авсd]", r"хар. [авсd]", r"([авсd])", r"[авсd](0|[1-9]\d*)а", r" [авсd] "],
                 "extraction": r"[a-d]",
                 "default": "с",
                 "format": r"{0}"
@@ -141,19 +141,19 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Общ. количество полюсов": {
-                "patterns": [r"\d+р", r"\d+ р"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)р", r"(0|[1-9]\d*) р"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "1",
                 "format": r"{0}"
             },
             "Номин. ток": {
-                "patterns": [r"с\d+а", r"\d+а", r"с\d+", r"\d+"],
-                "extraction": r"\d+",
+                "patterns": [r"с(0|[1-9]\d*)а", r"(0|[1-9]\d*)а", r"с(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "16",
                 "format": r"{0}, а"
             },
             "Характеристика срабатывания (кривая тока)": {
-                "patterns": [r"хар.[авсd]", r"хар. [авсd]", r"([авсd])", r"[авсd]\d+а", r" [авсd] "],
+                "patterns": [r"хар.[авсd]", r"хар. [авсd]", r"([авсd])", r"[авсd](0|[1-9]\d*)а", r" [авсd] "],
                 "extraction": r"[a-d]",
                 "default": "с",
                 "format": r"{0}"
@@ -164,10 +164,10 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. ток": {
-                "patterns": [r"\d+а", r"\\\d+", r"\d+"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)а", r"/(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "10, а",
-                "format": r"\d+, а"
+                "format": r"(0|[1-9]\d*), а"
             }
         }
     },
@@ -175,14 +175,14 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Количество полюсов": {
-                "patterns": [r"\d+р", r"\d+ р"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)р", r"(0|[1-9]\d*) р"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "1",
                 "format": r"{0}"
             },
             "Номин. ток": {
-                "patterns": [r"с\d+а", r"\d+а", r"с\d+", r"\d+"],
-                "extraction": r"\d+",
+                "patterns": [r"с(0|[1-9]\d*)а", r"(0|[1-9]\d*)а", r"с(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "100, а",
                 "format": r"{0}, а"
             }
@@ -192,14 +192,14 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Количество полюсов": {
-                "patterns": [r"\d+р", r"\d+ р"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)р", r"(0|[1-9]\d*) р"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "1",
                 "format": r"{0}"
             },
             "Номин. ток": {
-                "patterns": [r"с\d+а", r"\d+а", r"с\d+", r"\d+"],
-                "extraction": r"\d+",
+                "patterns": [r"с(0|[1-9]\d*)а", r"(0|[1-9]\d*)а", r"с(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "100, а",
                 "format": r"{0}, а"
             }
@@ -209,14 +209,14 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Вторичный номин. ток": {
-                "patterns": [r"\\\d+", r"\\ \d+"],
-                "extraction": r"\d+",
+                "patterns": [r"/(0|[1-9]\d*)", r"/ (0|[1-9]\d*)"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "5, а",
                 "format": r"{0}, а"
             },
             "Первичный номин. ток": {
-                "patterns": [r"\d+\\", r"\d+ \\"],
-                "extraction": r"\d+",
+                "patterns": [r"(0|[1-9]\d*)/", r"(0|[1-9]\d*) /"],
+                "extraction": r"(0|[1-9]\d*)",
                 "default": "800, а",
                 "format": r"{0}, а"
             }
@@ -800,7 +800,7 @@ def process_yolo_output(yolo_output, image_path, langs, det_processor, det_model
     for bbox, class_label in zip(bboxes, class_labels):
         if class_label not in shitty_labels:
             text = extract_text_around_element_hor_vert(
-                class_label, bbox, pil_image, margins, 1, 1, mmarg / 12, mmarg / 6.5, langs, det_processor, det_model,
+                class_label, bbox, pil_image, margins, 1, 1, mmarg / 18, mmarg / 8.5, langs, det_processor, det_model,
                 rec_model, rec_processor, display)
 
             extracted_texts.append((class_label, text))
@@ -889,54 +889,71 @@ def letter_transform(text):
         ']': '1',
         '|': '1',
         ',': '.',
-        'n': 'П'
+        'n': 'П',
+        'З': '3'
     }
     transformed_text = ''.join(transformations.get(ch, ch) for ch in text)
     return re.sub(r'\b(\d{2,})4\b', r'\1А', transformed_text)
-
 
 def letters_list_transform(data):
     return [(key, [letter_transform(item) for item in values]) for key, values in data]
 
 
-def get_estimates(input):
+def combinations_iterator(search_dict):
+    values_lists = search_dict.values()
+    product_results = itertools.product(*values_lists)
+    result_list = []
+    for combination in product_results:
+        result_dict = {key: value for key, value in zip(search_dict.keys(), combination)}
+        result_list.append(result_dict)
+    
+    return result_list
 
+def get_estimates(input, rules):
+    
     def find_match(s, pattern):
         match = re.search(pattern, s)
         return match.group(0) if match else None
-
-    smet = pd.DataFrame(columns=['article', 'name', 'price'])
+    
+    smet = pd.DataFrame(columns = ['article', 'name', 'price'])
 
     for label, text in input:
-        text = " ".join(text).lower()
+
+        text = " " + " ".join(text).lower() + " "
         r = rules[label]
         keywords = r['keywords']
         chars = r['characteristics']
-
         search_dict = {}
         for charactersitic, p in chars.items():
-            found = [find_match(text, mask) for mask in p['patterns']]
+            found = []
+            [found.extend(list(dict.fromkeys(re.findall(mask, text)))) for mask in p['patterns']]
+
             values = [find_match(x, p['extraction']) for x in found if x is not None]
             values = [x for x in values if x is not None]
+
             if values:
-                char = p['format'].format(values[0])
+                char = [p['format'].format(x) for x in values]
                 search_dict[charactersitic] = char
 
-        mask = df['тип элемента'].apply(lambda x: label == x)
-        for col, val in search_dict.items():
-            mask &= (df[col] == val)
-
-        q = df[mask].reset_index(drop=True)
-        if q.empty:
-            row = {"article": f"Нет в каталоге {label}", 'name': f"{label}",  "price": 0}
-        else:
-            res = q.loc[q['Базовая цена, ₽'].argmin()]
-            row = {'article': res['Артикул'], 'name': res['Наименование'], 'price': res['Базовая цена, ₽']}
+        row = None
+        for srchd in combinations_iterator(search_dict):
+            mask =  df['тип элемента'].apply(lambda x: label == x)
+            for col, val in srchd.items():
+                mask &= (df[col] == val)
+            q = df[mask].reset_index(drop=True)
+            if q.empty:
+                continue
+            else:
+                res = q.loc[q['Базовая цена, ₽'].argmin()]
+                row = {'article':res['Артикул'], 'name':res['Наименование'], 'price':res['Базовая цена, ₽']}
+                break
+        if row is None:
+            row = {"article": "Нет в каталоге", 'name': f"{label}", "price": 0}
         smet = pd.concat([smet, pd.DataFrame.from_records([row])])
-
-    grouped = smet.groupby('article').size().reset_index(name='amount')
+        
+    grouped = smet.groupby(['article']).size().reset_index(name='amount')
     smet = pd.merge(smet, grouped, on='article')
     smet['sum'] = smet['price'] * smet['amount']
     smet_unique = smet.drop_duplicates(subset=['article'])
-
+    
     return smet_unique.to_dict(orient='list')
