@@ -11,6 +11,7 @@ from sahi.utils.cv import read_image
 from sahi.predict import get_prediction, get_sliced_prediction
 import numpy as np
 import pandas as pd
+import math
 
 
 df = pd.read_csv("Dataset_final.csv", sep=';')
@@ -30,7 +31,7 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. ток": {
-                "patterns": [r"\d+а", r"\\d+", r"\d+"],
+                "patterns": [r"\d+а", r"\d+ а", r"\\\d+", r" \d+ "],
                 "extraction": r"\d+",
                 "format": r"\d+, а"
             }
@@ -59,7 +60,7 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. раб. ток Ie при AC-3, 400 В": {
-                "patterns": [r"\d+а", r"\\d+", r"\d+"],
+                "patterns": [r"\d+а", r"\\\d+", r"\d+"],
                 "extraction": r"\d+",
                 "default": "95, а",
                 "format": r"\d+, а"
@@ -88,7 +89,7 @@ rules = {
                 "format": ""
             },
             "Номин. ток": {
-                "patterns": [r"\d+а", r"\\d+", r"\d+"],
+                "patterns": [r"\d+а", r"\\\d+", r"\d+"],
                 "extraction": r"\d+",
                 "default": "40, а",
                 "format": r"\d+, а"
@@ -163,7 +164,7 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. ток": {
-                "patterns": [r"\d+а", r"\\d+", r"\d+"],
+                "patterns": [r"\d+а", r"\\\d+", r"\d+"],
                 "extraction": r"\d+",
                 "default": "10, а",
                 "format": r"\d+, а"
@@ -208,7 +209,7 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Вторичный номин. ток": {
-                "patterns": [r"\\d+", r" \d+"],
+                "patterns": [r"\\\d+", r"\\ \d+"],
                 "extraction": r"\d+",
                 "default": "5, а",
                 "format": r"{0}, а"
@@ -280,6 +281,42 @@ def display_image(title, img, cmap='gray'):
     plt.imshow(img, cmap=cmap)
     plt.axis('off')
     plt.show()
+
+
+def dist(point1, point2):
+
+    x1, y1 = point1
+    x2, y2 = point2
+    distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+    return distance
+
+
+def rect_distance(bbox1, bbox2):
+    x1, y1, x1b, y1b = bbox1
+    x2, y2, x2b, y2b = bbox2
+
+    left = x2b < x1
+    right = x1b < x2
+    bottom = y2b < y1
+    top = y1b < y2
+    if top and left:
+        return dist((x1, y1b), (x2b, y2))
+    elif left and bottom:
+        return dist((x1, y1), (x2b, y2b))
+    elif bottom and right:
+        return dist((x1b, y1), (x2, y2b))
+    elif right and top:
+        return dist((x1b, y1b), (x2, y2))
+    elif left:
+        return x1 - x2b
+    elif right:
+        return x2 - x1b
+    elif bottom:
+        return y1 - y2b
+    elif top:
+        return y2 - y1b
+    else:
+        return 0.
 
 
 def calculate_min_distance(bbox1, bbox2):
@@ -562,11 +599,11 @@ def extract_text_around_element(
         x1, y1, x2, y2 = bbox
         if cluster not in merged_bboxes:
             merged_bboxes[cluster] = [x1, y1, x2, y2]
-            merged_texts[cluster] = [(bbox_distance(fbbox, bbox), text)]
+            merged_texts[cluster] = [(rect_distance(fbbox, bbox), text)]
         else:
             mx1, my1, mx2, my2 = merged_bboxes[cluster]
             merged_bboxes[cluster] = [min(x1, mx1), min(y1, my1), max(x2, mx2), max(y2, my2)]
-            merged_texts[cluster].append((bbox_distance(fbbox, bbox), text))
+            merged_texts[cluster].append((rect_distance(fbbox, bbox), text))
 
     for cluster in merged_texts:
         merged_texts[cluster] = ' '.join(text for _, text in sorted(merged_texts[cluster]))
@@ -588,7 +625,7 @@ def extract_text_around_element(
         plt.title('Merged Bounding Boxes and Text by Clusters')
         plt.show()
 
-    distances = {key: bbox_distance(fbbox, merged_bbox) for key, merged_bbox in merged_bboxes.items()}
+    distances = {key: rect_distance(fbbox, merged_bbox) for key, merged_bbox in merged_bboxes.items()}
 
     sorted_merged_bboxes = sorted(merged_bboxes.items(), key=lambda item: distances[item[0]])
     sorted_distance_text_tuples = [(distances[key], merged_texts[key]) for key, _ in sorted_merged_bboxes]
@@ -720,6 +757,24 @@ def get_filtred_boxes_coco(image_path, model, iou_threshold=0.6, display=True):
     return filtred_coco
 
 
+shitty_labels = [
+    'HP',
+    'АК',
+    'QF0',
+    'U<',
+    'MX',
+    'WH',
+    'HL',
+    'Q',
+    'K',
+    'AVR',
+    'RXZ',
+    'SB',
+    'OPS',
+    'AUX',
+    'R']
+
+
 def process_yolo_output(yolo_output, image_path, langs, det_processor, det_model, rec_model, rec_processor, display):
     bboxes = [detection['bbox'] for detection in yolo_output]
     class_labels = [detection['category_name'] for detection in yolo_output]
@@ -736,10 +791,11 @@ def process_yolo_output(yolo_output, image_path, langs, det_processor, det_model
     extracted_texts = []
 
     for bbox, class_label in zip(bboxes, class_labels):
-        text = extract_text_around_element_hor_vert(
-            class_label, bbox, pil_image, margins, 1, 1, mmarg / 12, mmarg / 6.5, langs, det_processor, det_model,
-            rec_model, rec_processor, display)
-        if class_label not in ['WH', 'HL', 'AVR']:
+        if class_label not in shitty_labels:
+            text = extract_text_around_element_hor_vert(
+                class_label, bbox, pil_image, margins, 1, 1, mmarg / 12, mmarg / 6.5, langs, det_processor, det_model,
+                rec_model, rec_processor, display)
+
             extracted_texts.append((class_label, text))
 
     return extracted_texts

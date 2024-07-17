@@ -29,7 +29,7 @@ rec_model, rec_processor = load_model(), load_processor()
 threshhold = 0.2
 yolo_model = AutoDetectionModel.from_pretrained(
     model_type='yolov8',
-    model_path='epoch32.pt',
+    model_path='epoch44.pt',
     confidence_threshold=threshhold
 )
 logger.info("Можете начинать отправлять схемы")
@@ -90,8 +90,10 @@ def process_image_endpoint(input: ImageInput):
     res = process_yolo_output(yolo_output, unique_filename, langs, det_processor,
                               det_model, rec_model, rec_processor, display=False)
     res_tr = letters_list_transform(res)
+    logger.info(f'res: {res}')
+    logger.info(f'res_tr: {res_tr}')
     search_res = get_estimates(res_tr)
-    logger.info(f'{res}')
+
 
     os.remove(unique_filename)
 
