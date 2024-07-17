@@ -428,6 +428,14 @@ def extract_text_around_element(
     expanded_x2 = min(image.width, x2 + margin_x2)
     expanded_y2 = min(image.height, y2 + margin_y2)
 
+    rel_x = x - expanded_x1
+    rel_y = y - expanded_y1
+    rel_w = x2 - x
+    rel_h = y2 - y
+    rel_x2 = rel_x + rel_w
+    rel_y2 = rel_y+rel_h
+
+    fbbox_rel = [rel_x, rel_y, rel_x2, rel_y2]
 #     print((expanded_x1, expanded_y1, expanded_x2, expanded_y2))
 
     cropped_img = image.crop((expanded_x1, expanded_y1, expanded_x2, expanded_y2))
@@ -599,11 +607,11 @@ def extract_text_around_element(
         x1, y1, x2, y2 = bbox
         if cluster not in merged_bboxes:
             merged_bboxes[cluster] = [x1, y1, x2, y2]
-            merged_texts[cluster] = [(rect_distance(fbbox, bbox), text)]
+            merged_texts[cluster] = [(rect_distance(fbbox_rel, bbox), text)]
         else:
             mx1, my1, mx2, my2 = merged_bboxes[cluster]
             merged_bboxes[cluster] = [min(x1, mx1), min(y1, my1), max(x2, mx2), max(y2, my2)]
-            merged_texts[cluster].append((rect_distance(fbbox, bbox), text))
+            merged_texts[cluster].append((rect_distance(fbbox_rel, bbox), text))
 
     for cluster in merged_texts:
         merged_texts[cluster] = ' '.join(text for _, text in sorted(merged_texts[cluster]))
@@ -625,13 +633,12 @@ def extract_text_around_element(
         plt.title('Merged Bounding Boxes and Text by Clusters')
         plt.show()
 
-    distances = {key: rect_distance(fbbox, merged_bbox) for key, merged_bbox in merged_bboxes.items()}
+    distances = {key: rect_distance(fbbox_rel, merged_bbox) for key, merged_bbox in merged_bboxes.items()}
 
     sorted_merged_bboxes = sorted(merged_bboxes.items(), key=lambda item: distances[item[0]])
     sorted_distance_text_tuples = [(distances[key], merged_texts[key]) for key, _ in sorted_merged_bboxes]
 
     return sorted_distance_text_tuples
-
 
 def extract_text_around_element_hor_vert(
         class_label, bbox, image, margins, fx, fy, eps_x, eps_y, langs, det_processor, det_model, rec_model,
