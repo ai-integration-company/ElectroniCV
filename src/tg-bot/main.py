@@ -26,6 +26,22 @@ WEB_APP_URL = os.environ.get("WEB_APP_URL")
 
 ML_URL = os.environ.get("ML_URL")
 
+NODE_ID = os.environ.get("NODE_ID")
+
+AUTH_TOKEN = os.environ.get("AUTH_TOKEN")
+
+X_FOLDER = os.environ.get("X_FOLDER")
+
+
+headers = {
+    "x-node-id": NODE_ID,
+    "Authorization": f"Bearer {AUTH_TOKEN}",
+    "x-folder-id": X_FOLDER,
+    "Content-Type": "application/json"
+
+}
+
+
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
@@ -75,7 +91,7 @@ async def handle_docs_photo(message: types.Message):
                     #    await message.answer_document(FSInputFile('file.txt'))
 
                     data = {'article': [], 'name': [], 'amount': [], 'price': [], 'sum': []}
-                    async with session.post(ML_URL, json={'image': encoded_image.decode()}) as ml_resp:
+                    async with session.post(ML_URL, headers=headers, json={'image': encoded_image.decode()}) as ml_resp:
                         if ml_resp.status == 200:
                             data = await ml_resp.json()
 

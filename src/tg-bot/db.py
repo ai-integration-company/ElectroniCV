@@ -3,9 +3,8 @@ from contextlib import closing
 from pydantic import BaseModel
 from typing import List
 
-FILE_DATA='file_data.db'
+FILE_DATA = 'file_data.db'
 
-#mapping from eng to rus
 column_mapping = {
     'article': 'Артикул',
     'name': 'Номенклатура',
@@ -14,8 +13,9 @@ column_mapping = {
     'sum': 'Стоимость'
 }
 
+
 class FileData(BaseModel):
-    
+
     user_id: str
     file_id: str
     article: str
@@ -24,10 +24,12 @@ class FileData(BaseModel):
     price: float
     sum: float
 
+
 class FileDataResponse(BaseModel):
     file_id: str
     data: List[FileData]
-    
+
+
 def init_db():
     conn = sqlite3.connect(FILE_DATA)
     cursor = conn.cursor()
@@ -44,8 +46,8 @@ def init_db():
             """)
     conn.commit
     conn.close
-    
-#def init_db():
+
+# def init_db():
 #    with closing(sqlite3.connect(FILE_DATA)) as conn:
 #        with conn:
 #            conn.execute("""
@@ -60,10 +62,13 @@ def init_db():
 #            )
 #            """)
 #
+
+
 def get_db():
     conn = sqlite3.connect(FILE_DATA)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def create_file_data(conn: sqlite3.Connection, user_id: str, file_id: str, data: List[dict]):
     with conn:
@@ -71,6 +76,7 @@ def create_file_data(conn: sqlite3.Connection, user_id: str, file_id: str, data:
             conn.execute("""
             INSERT INTO file_data (user_id, file_id, article, name, amount, price, sum) VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (user_id, file_id, item['article'], item['name'], item['amount'], item['price'], item['sum']))
+
 
 def get_file_data(conn: sqlite3.Connection, user_id: str, file_id: str) -> List[FileData]:
     cursor = conn.cursor()
