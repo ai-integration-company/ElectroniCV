@@ -14,16 +14,23 @@ import pandas as pd
 import math
 
 
-df = pd.read_csv("Dataset_fin.csv", sep=';')
-
+df = pd.read_csv("Dataset_fin.csv", sep = ';')
 df['Количество полюсов'] = df['Количество полюсов'].fillna('')
 df['Общ. количество полюсов'] = df['Общ. количество полюсов'].fillna('')
 df['Количество проводников (без заземления)'] = df['Количество проводников (без заземления)'].fillna('')
 
+# Преобразование всех значений в строковый тип
 df['Количество полюсов'] = df['Количество полюсов'].apply(lambda x: str(int(x)) if x != '' else '')
 df['Общ. количество полюсов'] = df['Общ. количество полюсов'].apply(lambda x: str(int(x)) if x != '' else '')
-df['Количество проводников (без заземления)'] = df['Количество проводников (без заземления)'].apply(
-    lambda x: str(int(x)) if x != '' else '')
+df['Количество проводников (без заземления)'] = df['Количество проводников (без заземления)'].apply(lambda x: str(int(x)) if x != '' else '')
+
+df['Характеристика срабатывания (кривая тока)'] = df['Характеристика срабатывания (кривая тока)'].replace('a', 'а')
+df['Характеристика срабатывания (кривая тока)'] = df['Характеристика срабатывания (кривая тока)'].replace('c', 'с')
+df['Характеристика срабатывания (кривая тока)'] = df['Характеристика срабатывания (кривая тока)'].replace('b', 'в')
+
+zero_cost_articles = ['DA32-20-100-4P-pro', 'mcb4763-6-4-63C-pro', 'DA32-20-30-4P-a-pro']
+for a in zero_cost_articles:
+    df = df[~(df[['Артикул']]== a).any(axis=1)]
 
 
 rules = {
@@ -31,8 +38,8 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. ток": {
-                "patterns": [r" (0|[1-9]\d*)а", r" (0|[1-9]\d*) а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
+                "extraction": r"\d+",
                 "format": r"{0}, а"
             }
         }
@@ -41,13 +48,13 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Максимальное напряжение переменного тока (АС)": {
-                "patterns": [r"(0|[1-9]\d*)в", r"(0|[1-9]\d*) в"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*в"],
+                "extraction": r"\d+",
                 "format": r"{0}, в"
             },
             "Количество проводников (без заземления)": {
-                "patterns": [r"(0|[1-9]\d*) р", r"(0|[1-9]\d*)р"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*р"],
+                "extraction": r"\d+",
                 "format": r"{0}"
             }
         }
@@ -60,10 +67,10 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. раб. ток Ie при AC-3, 400 В": {
-                "patterns": [r"(0|[1-9]\d*)а", r"/(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
+                "extraction": r"\d+",
                 "default": "95, а",
-                "format": r"(0|[1-9]\d*), а"
+                "format": r"{0}, а"
             }
         }
     },
@@ -89,10 +96,10 @@ rules = {
                 "format": ""
             },
             "Номин. ток": {
-                "patterns": [r"(0|[1-9]\d*)а", r"/(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
+                "extraction": r"\d+",
                 "default": "40, а",
-                "format": r"(0|[1-9]\d*), а"
+                "format": r"{0}, а"
             },
             "Тип тока утечки": {
                 "patterns": [],
@@ -101,14 +108,14 @@ rules = {
                 "format": r"{0}"
             },
             "Номин. напряжение": {
-                "patterns": [r"(0|[1-9]\d*)в", r"(0|[1-9]\d*) в"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*в"],
+                "extraction": r"\d+",
                 "default": "400, в",
                 "format": r"{0}, в"
             },
             "Количество полюсов": {
-                "patterns": [r"(0|[1-9]\d*) р", r"(0|[1-9]\d*)р"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*р"],
+                "extraction": r"\d+",
                 "default": "1",
                 "format": r"{0}"
             }
@@ -118,20 +125,20 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. ток": {
-                "patterns": [r"с(0|[1-9]\d*)а", r"(0|[1-9]\d*)а", r"с(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
-                "extraction": r"(0|[1-9]\d*)",
-                "default": "16",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
+                "extraction": r"\d+",
+                "default": "16, а",
                 "format": r"{0}, а"
             },
             "Общ. количество полюсов": {
-                "patterns": [r"(0|[1-9]\d*)р", r"(0|[1-9]\d*) р"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*р"],
+                "extraction": r"\d+",
                 "default": "1",
                 "format": r"{0}"
             },
             "Характеристика срабатывания (кривая тока)": {
-                "patterns": [r"хар.[авсd]", r"хар. [авсd]", r"([авсd])", r"[авсd](0|[1-9]\d*)а", r" [авсd] "],
-                "extraction": r"[a-d]",
+                "patterns": [r"хар.\s*([авсd]) ", r" ([авсd])(?<!\d)[1-9]\d*\s*а ", r" \([авсd]\) ", r' "[авсd]" '],
+                "extraction": r"[авсd]",
                 "default": "с",
                 "format": r"{0}"
             }
@@ -140,21 +147,15 @@ rules = {
     "QFD": {
         "keywords": [],
         "characteristics": {
-            "Общ. количество полюсов": {
-                "patterns": [r"(0|[1-9]\d*)р", r"(0|[1-9]\d*) р"],
-                "extraction": r"(0|[1-9]\d*)",
-                "default": "1",
-                "format": r"{0}"
-            },
             "Номин. ток": {
-                "patterns": [r"с(0|[1-9]\d*)а", r"(0|[1-9]\d*)а", r"с(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
+                "extraction": r"\d+",
                 "default": "16",
                 "format": r"{0}, а"
             },
             "Характеристика срабатывания (кривая тока)": {
-                "patterns": [r"хар.[авсd]", r"хар. [авсd]", r"([авсd])", r"[авсd](0|[1-9]\d*)а", r" [авсd] "],
-                "extraction": r"[a-d]",
+                "patterns": [r"хар.\s*([авсd]) ", r" ([авсd])(?<!\d)[1-9]\d*\s*а ", r" \([авсd]\) ", r' "[авсd]" '],
+                "extraction": r"[авсd]",
                 "default": "с",
                 "format": r"{0}"
             }
@@ -164,10 +165,10 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Номин. ток": {
-                "patterns": [r"(0|[1-9]\d*)а", r"/(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
+                "extraction": r"\d+",
                 "default": "10, а",
-                "format": r"(0|[1-9]\d*), а"
+                "format": r"{0}, а"
             }
         }
     },
@@ -175,14 +176,14 @@ rules = {
         "keywords": [],
         "characteristics": {
             "Количество полюсов": {
-                "patterns": [r"(0|[1-9]\d*)р", r"(0|[1-9]\d*) р"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*р"],
+                "extraction": r"\d+",
                 "default": "1",
                 "format": r"{0}"
             },
             "Номин. ток": {
-                "patterns": [r"с(0|[1-9]\d*)а", r"(0|[1-9]\d*)а", r"с(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
+                "extraction": r"\d+",
                 "default": "100, а",
                 "format": r"{0}, а"
             }
@@ -198,8 +199,8 @@ rules = {
                 "format": r"{0}"
             },
             "Номин. ток": {
-                "patterns": [r"с(0|[1-9]\d*)а", r"(0|[1-9]\d*)а", r"с(0|[1-9]\d*)", r"(0|[1-9]\d*)"],
-                "extraction": r"(0|[1-9]\d*)",
+                "patterns": [r"(?<!\d)[1-9]\d*\s*а", r"/(0|[1-9]\d*) ", r" (0|[1-9]\d*) "],
+                "extraction": r"\d+",
                 "default": "100, а",
                 "format": r"{0}, а"
             }
@@ -909,7 +910,7 @@ def combinations_iterator(search_dict):
     
     return result_list
 
-def get_estimates(input, rules):
+def get_estimates(input):
     
     def find_match(s, pattern):
         match = re.search(pattern, s)
