@@ -24,7 +24,7 @@
 
 ```bash
 ML_URL=http://cv:3000/process_image
-BOT_TOKEN=7055398405:AAEX7X5OAPRzsTfgu8u_To_TddsKmJV3Z30
+BOT_TOKEN=
 WEB_APP_URL=https://codenrock.com/contests/ekf-ai-challenge
 ```
  4. Выполните следующие команды
